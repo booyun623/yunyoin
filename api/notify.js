@@ -5,7 +5,7 @@ export default async function handler(req, res) {
 
   // 🔴 必改！請把下面的網址改成妳 Vercel 提供的那個網址
   // 例如: "https://yun-you-win.vercel.app"
-  const myAppUrl = "https://yunyoin-git-main-bettys-projects-8a34d6f2.vercel.app"; 
+  const myAppUrl = "yunyoin.vercel.app"; 
 
   if (!token) return res.status(500).json({ error: '缺少 LINE Token' });
 
