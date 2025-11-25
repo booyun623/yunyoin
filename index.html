@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#ffffff">
+    <title>云侑贏</title>
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2503/2503508.png">
+    <style>
+        /* --- 樣式設定 --- */
+        :root { --girl-color: #005AB5; --boy-color: #FFF0AC; --boy-text: #5d4037; --card-radius: 24px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", sans-serif; margin: 0; background-color: #fff; height: 100vh; overscroll-behavior-y: none; user-select: none; -webkit-user-select: none; }
+        #app { display: flex; flex-direction: column; height: 100%; max-width: 450px; margin: 0 auto; background: #fff; transition: background 0.5s ease; position: relative;}
+        body.mode-girl #app { background: linear-gradient(170deg, var(--girl-color) 0%, #ffffff 35%); }
+        body.mode-boy #app { background: linear-gradient(170deg, var(--boy-color) 0%, #ffffff 35%); }
+        header { padding-top: max(20px, env(safe-area-inset-top)); padding-bottom: 10px; text-align: center; font-weight: 600; display: flex; justify-content: center; z-index: 10; color: #333;}
+        body.mode-girl header { color: white; }
+        body.mode-boy header { color: var(--boy-text); }
+        .content-area { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 100px; }
+        .avatar-container { display: flex; flex-direction: column; align-items: center; margin: 20px 0 30px 0; }
+        .avatar-circle { width: 110px; height: 110px; border-radius: 50%; background: white; border: 4px solid white; box-shadow: 0 8px 20px rgba(0,0,0,0.06); overflow: hidden; display:flex; justify-content:center; align-items:center; font-size:50px;}
+        .avatar-img { width: 100%; height: 100%; object-fit: cover; }
+        .status-badge { margin-top: -15px; background: white; padding: 5px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 2; }
+        .grid-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .action-card { background: white; border-radius: var(--card-radius); padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,0,0,0.06); cursor: pointer; height: 100px; transition: transform 0.1s; }
+        .action-card:active { transform: scale(0.96); }
+        .action-card-lg { grid-column: span 2; height: 110px; flex-direction: row; gap: 20px; background: #fff5f5; border: 2px solid #ffebeb; }
+        .debt-board { background: rgba(255,255,255,0.9); border-radius: 16px; padding: 15px 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); cursor: pointer; }
+        .bottom-nav { position: absolute; bottom: 0; width: 100%; height: 85px; background: rgba(255,255,255,0.95); border-top: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-around; padding-top: 10px; z-index: 10; box-sizing: border-box;}
+        .nav-btn { display: flex; flex-direction: column; align-items: center; color: #aaa; font-size: 0.7rem; cursor: pointer; width: 60px; }
+        .nav-btn.active { color: #333; font-weight: bold; }
+        .page { display: none; } .page.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* 角色選擇與警報 */
+        #role-selector { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .role-btn { width: 200px; padding: 20px; margin: 10px; border-radius: 20px; text-align: center; font-size: 1.2rem; cursor: pointer; border: 2px solid #eee; font-weight:bold;}
+        #alert-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; display: none; align-items: center; justify-content: center; flex-direction: column; color: white; text-align:center;}
+        .pacify-btn { background: white; color: #333; padding: 15px 30px; border-radius: 50px; margin-top: 10px; font-weight: bold; width: 70%; text-align: center; cursor: pointer; transition:0.2s;}
+        .pacify-btn:active { transform:scale(0.95); opacity:0.9; }
+        
+        /* 紀錄列表 */
+        .history-item { display: flex; gap: 15px; margin-bottom: 20px; }
+        .date-badge { background: #f0f0f0; width: 50px; height: 50px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.75rem; flex-shrink: 0; color:#666;}
+        .history-content { flex: 1; background: white; padding: 12px 15px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); font-size: 0.95rem; border:1px solid #f5f5f5;}
+        .history-time { font-size: 0.75rem; color: #999; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+
+    <div id="role-selector">
+        <h2 style="margin-bottom:30px;">請問你是？</h2>
+        <div class="role-btn" style="background:#e3f2fd; color:#005AB5;" onclick="setRole('girl')">我是 張比比 👩🏻‍🏫</div>
+        <div class="role-btn" style="background:#fff9c4; color:#5d4037;" onclick="setRole('boy')">我是 李比比 👦🏻</div>
+    </div>
+
+    <div id="alert-modal">
+        <div style="font-size:5rem; margin-bottom:20px;">🚨</div>
+        <h2 id="alert-title" style="font-size:1.8rem; margin:0;">寶寶生氣了！</h2>
+        <p style="opacity:0.8; margin-bottom:30px;">快想想辦法！</p>
+        
+        <div id="pacify-options" style="width:100%; display:flex; flex-direction:column; align-items:center;">
+            <div class="pacify-btn" onclick="pacify('飯')">🍚 不氣不氣，請妳吃飯</div>
+            <div class="pacify-btn" onclick="pacify('飲料')">🧋 不氣不氣，請妳喝飲料</div>
+            <div class="pacify-btn" onclick="pacify('外送')">🛵 不氣不氣，馬上叫外送</div>
+        </div>
+        
+        <div id="wait-msg" style="display:none; color:white; opacity:0.8; margin-top:20px;">
+            <p>已發送通知給對方</p>
+            <p style="font-size:0.9rem;">等待對方哄妳中...</p>
+        </div>
+    </div>
+
+    <div id="app">
+        <header><span id="header-text">云侑贏</span></header>
+        
+        <div id="page-home" class="content-area page active">
+            <div class="avatar-container">
+                <div class="avatar-circle">
+                    <span id="avatar-emoji" style="font-size:50px;">👩🏻‍🏫</span>
+                    </div>
+                <div class="status-badge" id="status-badge">心情平靜</div>
+            </div>
+
+            <div class="debt-board" onclick="switchPage('records')">
+                <div>
+                    <div style="font-size:0.8rem; color:#666;">尚欠清單</div>
+                    <div style="font-weight:bold;">李比比還欠我...</div>
+                </div>
+                <div style="font-size:1.8rem; font-weight:800; color:#ff5252;"><span id="debt-count">0</span> <span style="font-size:1rem; font-weight:normal; color:#666;">次</span></div>
+            </div>
+
+            <div class="grid-actions">
+                <div class="action-card" onclick="updateStatus('miss')">
+                    <div style="font-size:2.5rem;">🥺</div>
+                    <div style="margin-top:5px; font-weight:bold; color:#555;">想你了</div>
+                </div>
+                <div class="action-card" onclick="updateStatus('sad')">
+                    <div style="font-size:2.5rem;">😢</div>
+                    <div style="margin-top:5px; font-weight:bold; color:#555;">難過了</div>
+                </div>
+                <div class="action-card action-card-lg" onclick="updateStatus('angry')">
+                    <div style="font-size:2.5rem;">😤</div>
+                    <div>
+                        <div style="font-weight:bold; color:#d32f2f; font-size:1.1rem;">我生氣了！</div>
+                        <div style="font-size:0.8rem; color:#d32f2f; opacity:0.8;">快點來哄我</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-records" class="content-area page">
+            <h2 style="margin:0 0 20px 0; font-size:1.4rem;">回憶紀錄簿</h2>
+            <div id="history-list">
+                <div style="text-align:center; color:#999; margin-top:50px;">暫無紀錄</div>
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <div class="nav-btn active" onclick="switchPage('home', this)"><span>🏠</span>首頁</div>
+            <div class="nav-btn" onclick="switchPage('records', this)"><span>📒</span>紀錄</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // ============================================
+        // ⚠️ 請在這裡貼上你的 Firebase Config ⚠️
+        // ============================================
+        const firebaseConfig = {
+            // 請把你的 apiKey, authDomain 等等全部貼在這裡覆蓋掉
+          apiKey: "AIzaSyC33OVg3M2ON8TvQzpiA29fWXLzpfczx2c",
+            authDomain: "yunyoin.firebaseapp.com",
+            databaseURL: "https://yunyoin-default-rtdb.firebaseio.com", 
+            projectId: "yunyoin",
+            storageBucket: "yunyoin.firebasestorage.app",
+            messagingSenderId: "633490408526",
+            appId: "1:633490408526:web:e9ab21c37fe9de4fb02f1f"
+        };
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // 基本變數
+        window.myRole = localStorage.getItem('role'); 
+        
+        // 1. 角色設定
+        if (window.myRole) {
+            document.getElementById('role-selector').style.display = 'none';
+            applyTheme(window.myRole);
+        }
+
+        window.setRole = function(role) {
+            localStorage.setItem('role', role);
+            window.myRole = role;
+            document.getElementById('role-selector').style.display = 'none';
+            applyTheme(role);
+        }
+
+        function applyTheme(role) {
+            document.body.className = (role === 'girl') ? 'mode-girl' : 'mode-boy';
+            const emoji = document.getElementById('avatar-emoji');
+            // 這裡可以改大頭貼 Emoji
+            if(role === 'girl') {
+                emoji.innerText = "👩🏻‍🏫";
+            } else {
+                emoji.innerText = "👦🏻"; 
+            }
+        }
+
+        // 2. LINE 通知功能
+        async function sendLineNotify(msg) {
+            try {
+                // 呼叫我們剛剛寫的 api/notify.js
+                await fetch(`/api/notify?message=${encodeURIComponent(msg)}`);
+                console.log("LINE 通知請求已發送");
+            } catch (e) {
+                console.error("LINE 通知失敗", e);
+            }
+        }
+
+        // 3. 監聽資料庫變化
+        const statusRef = ref(db, 'currentStatus');
+        const debtRef = ref(db, 'debtCount');
+        const historyRef = ref(db, 'history');
+
+        onValue(statusRef, (snapshot) => {
+            const data = snapshot.val(); 
+            if (data && data.state === 'angry') {
+                if (data.who !== window.myRole) {
+                    // 對方生氣了 -> 顯示哄人選項
+                    showAlert(true, data.who);
+                } else {
+                    // 我自己生氣了 -> 顯示等待畫面
+                    showWaitMode();
+                }
+            } else {
+                // 和平狀態
+                hideAlert();
+                if(data && data.state === 'miss') updateBadge(`${data.who === 'girl'?'張':'李'}比比想你了`, '🥺');
+                else if(data && data.state === 'sad') updateBadge(`${data.who === 'girl'?'張':'李'}比比難過了`, '😢');
+                else updateBadge('心情平靜', '');
+            }
+        });
+
+        onValue(debtRef, (snapshot) => {
+            document.getElementById('debt-count').innerText = snapshot.val() || 0;
+        });
+
+        onValue(historyRef, (snapshot) => {
+            const list = document.getElementById('history-list');
+            const data = snapshot.val();
+            if(data) {
+                list.innerHTML = '';
+                // 將物件轉陣列並反轉
+                Object.values(data).reverse().forEach(item => {
+                    const date = new Date(item.timestamp);
+                    const html = `
+                    <div class="history-item">
+                        <div class="date-badge">
+                            <span>${date.getMonth()+1}月</span>
+                            <span style="font-weight:bold; font-size:1.1rem">${date.getDate()}</span>
+                        </div>
+                        <div class="history-content">
+                            <div class="history-time">${date.getHours()}:${String(date.getMinutes()).padStart(2,'0')}</div>
+                            <div style="line-height:1.4;">${item.msg}</div>
+                        </div>
+                    </div>`;
+                    list.innerHTML += html;
+                });
+            }
+        });
+
+        // 4. 更新狀態 (發送端)
+        window.updateStatus = function(state) {
+            set(statusRef, {
+                state: state,
+                who: window.myRole,
+                timestamp: Date.now()
+            });
+            
+            let msg = "";
+            const name = window.myRole === 'girl' ? '張比比' : '李比比';
+            
+            if(state === 'angry') {
+                msg = `⚠️ 警報！${name} 生氣了！快去看看！`;
+                sendLineNotify(msg); // 發送 LINE
+            }
+            if(state === 'miss') {
+                 msg = `${name} 說：我想你了 ❤️`;
+                 sendLineNotify(msg); // 發送 LINE
+            }
+            if(state === 'sad') {
+                 msg = `${name} 說：我難過了 😢`;
+                 sendLineNotify(msg); // 發送 LINE
+            }
+
+            if(msg) {
+                push(historyRef, { msg: msg, timestamp: Date.now() });
+            }
+        }
+
+        // 5. 哄人功能
+        window.pacify = function(item) {
+            const countElem = document.getElementById('debt-count');
+            let currentDebt = parseInt(countElem.innerText) || 0;
+            set(debtRef, currentDebt + 1);
+            set(statusRef, { state: 'normal', who: 'none' });
+
+            const myName = window.myRole === 'girl' ? '張比比' : '李比比';
+            const partnerName = window.myRole === 'girl' ? '李比比' : '張比比';
+            const msg = `${myName} 選擇了「${item}」！\n欠債 +1，${partnerName} 記得要還債喔！`;
+            
+            sendLineNotify(msg); // 發送 LINE
+            push(historyRef, { msg: msg, timestamp: Date.now() });
+            hideAlert();
+        }
+
+        // UI 函式
+        function showAlert(isPartnerAngry, partnerRole) {
+            const modal = document.getElementById('alert-modal');
+            const options = document.getElementById('pacify-options');
+            const waitMsg = document.getElementById('wait-msg');
+            modal.style.display = 'flex';
+            if (isPartnerAngry) {
+                document.getElementById('alert-title').innerText = `${partnerRole === 'girl'?'張':'李'}比比生氣了！`;
+                options.style.display = 'flex';
+                waitMsg.style.display = 'none';
+            }
+        }
+        function showWaitMode() {
+            const modal = document.getElementById('alert-modal');
+            document.getElementById('alert-modal').style.display = 'flex';
+            document.getElementById('pacify-options').style.display = 'none';
+            document.getElementById('wait-msg').style.display = 'block';
+            document.getElementById('alert-title').innerText = "生氣中...";
+        }
+        function hideAlert() {
+            document.getElementById('alert-modal').style.display = 'none';
+        }
+        function updateBadge(text, icon) {
+            document.getElementById('status-badge').innerText = text + " " + icon;
+        }
+        window.switchPage = function(pageId, btn) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            if(btn) {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>
